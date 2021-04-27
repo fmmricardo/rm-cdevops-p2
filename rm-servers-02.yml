@@ -74,22 +74,16 @@ Resources:
   WebAppLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          sudo apt-get update -y
-          sudo apt-get install apache2 -y
-          sudo systemctl start apache2.service          
       ImageId: ami-047a51fa27710816e
       IamInstanceProfile: !Ref ServerInstanceProfile
       KeyName: VocareumKey2 # Provides the name of the EC2 key pair. 
       SecurityGroups:
       - Ref: WebServerSecGroup
-      InstanceType: t3.medium # specific machine from amazon
+      InstanceType: t3.medium 
       BlockDeviceMappings:
-      - DeviceName: "/dev/sdk" # linux devive name, mount ponts to create folders
+      - DeviceName: "/dev/sdk"         
         Ebs:
-          VolumeSize: '10' #how much hardrivce space the machine will need gb 
+          VolumeSize: '10'  
       UserData:
         Fn::Base64: !Sub |
          #!/bin/bash
@@ -100,6 +94,7 @@ Resources:
          cd /var/www/html
          aws s3 cp s3://udacity-demo-1/udacity.zip .
          unzip -o udacity.zip
+
   WebAppGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -107,13 +102,13 @@ Resources:
       - Fn::ImportValue: 
           !Sub "${EnvironmentName}-PRIV-NETS"
       LaunchConfigurationName:
-        Ref: WebAppLaunchConfig # ref to security group => port 8080 open to the world
+        Ref: WebAppLaunchConfig 
       MinSize: '4'
       MaxSize: '6'
       TargetGroupARNs:
       - Ref: WebAppTargetGroup
+
   WebAppLB:
-    # the subnets need to be provided 
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Subnets:
@@ -121,6 +116,7 @@ Resources:
       - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
       SecurityGroups:
       - Ref: LBSecGroup
+
   Listener: 
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -132,6 +128,7 @@ Resources:
         Ref: WebAppLB
       Port: '80'
       Protocol: HTTP
+
   ALBListenerRule:
     #is required by the loadbalancer 
      Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -144,6 +141,7 @@ Resources:
          Values: [/] #pass to listen to 
        ListenerArn: !Ref 'Listener'
        Priority: 1
+
   WebAppTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup 
     Properties:
@@ -159,17 +157,12 @@ Resources:
         Fn::ImportValue:
           Fn::Sub: "${EnvironmentName}-VPCID"
   
-  ProfileWithRolesForOurApp:
-       Type: AWS::IAM::InstanceProfile
-       Properties: 
-         Roles:
-           - UdacityS3ReadOnlyEC2
-  
 
 Outputs: 
 
- LoadBalancerDNSName:
-  Description: DNS Name of the web application
-  Value: !Join [ "", [ "http://", !GetAtt LoadBalancer.DNSName ] ]
-  Export:
-    Name: !Sub "${ProjectName}-DNS-NAME"
+  LoadBalancer:
+    Description: The Url to the loadbalancer
+    Value:
+      Fn::Join: ["", ["http://", !GetAtt WebAppLB.DNSName]]
+    Export:
+      Name: !Sub ${EnvironmentName}-DNSName
