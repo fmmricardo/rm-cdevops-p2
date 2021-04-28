@@ -54,7 +54,7 @@ Resources:
         Type: AWS::EC2::VPCGatewayAttachment
         Properties:
             InternetGatewayId: !Ref InternetGateway
-            VpcId: !Ref VPC #this value is passed from the internetGateway
+            VpcId: !Ref VPC 
 
     PublicSubnet1: 
         Type: AWS::EC2::Subnet
@@ -105,7 +105,7 @@ Resources:
         DependsOn: InternetGatewayAttachment
         Properties: 
             Domain: vpc
-   #DependsOn -> untile the other resource be completed this one will not run
+    
     NatGateway2EIP:
         Type: AWS::EC2::EIP
         DependsOn: InternetGatewayAttachment
@@ -115,7 +115,7 @@ Resources:
     NatGateway1: 
         Type: AWS::EC2::NatGateway
         Properties: 
-            AllocationId: !GetAtt NatGateway1EIP.AllocationId #Id alocated on on NatGateway1EIP
+            AllocationId: !GetAtt NatGateway1EIP.AllocationId 
             SubnetId: !Ref PublicSubnet1
 
     NatGateway2: 
@@ -124,7 +124,6 @@ Resources:
             AllocationId: !GetAtt NatGateway2EIP.AllocationId
             SubnetId: !Ref PublicSubnet2
     
-    # Define a RouteTable
     PublicRouteTable:
         Type: AWS::EC2::RouteTable
         Properties: 
@@ -132,13 +131,12 @@ Resources:
             Tags: 
                 - Key: Name 
                   Value: !Sub ${EnvironmentName} Public Routes
-    # Define a Routing Rule
     DefaultPublicRoute: 
         Type: AWS::EC2::Route
-        DependsOn: InternetGatewayAttachment #this may not be necessary, is to guaranty that the InternetGateway is attached to the VPC during the creation of this resource
+        DependsOn: InternetGatewayAttachment 
         Properties: 
-            RouteTableId: !Ref PublicRouteTable # attach the rule to our table
-            DestinationCidrBlock: 0.0.0.0/0 # wild card address, if we routing traffic to any address, they will be routed to the internetGateway
+            RouteTableId: !Ref PublicRouteTable 
+            DestinationCidrBlock: 0.0.0.0/0 
             GatewayId: !Ref InternetGateway
 
     PublicSubnet1RouteTableAssociation:
@@ -153,7 +151,6 @@ Resources:
             RouteTableId: !Ref PublicRouteTable
             SubnetId: !Ref PublicSubnet2
     
-
     PrivateRouteTable1:
         Type: AWS::EC2::RouteTable
         Properties: 
@@ -167,7 +164,7 @@ Resources:
         Properties:
             RouteTableId: !Ref PrivateRouteTable1
             DestinationCidrBlock: 0.0.0.0/0
-            NatGatewayId: !Ref NatGateway1 #this keep the traffic of the subnets within the VPC
+            NatGatewayId: !Ref NatGateway1 
 
     PrivateSubnet1RouteTableAssociation:
         Type: AWS::EC2::SubnetRouteTableAssociation
@@ -175,7 +172,7 @@ Resources:
             RouteTableId: !Ref PrivateRouteTable1
             SubnetId: !Ref PrivateSubnet1
 
-    PrivateRouteTable2: # this will help with future expantion
+    PrivateRouteTable2: 
         Type: AWS::EC2::RouteTable
         Properties: 
             VpcId: !Ref VPC
@@ -201,7 +198,7 @@ Outputs:
         Description: A reference to the created VPC
         Value: !Ref VPC
         Export:
-          Name: !Sub ${EnvironmentName}-VPCID # Sub-> substitution 
+          Name: !Sub ${EnvironmentName}-VPCID  
 
     VPCPublicRouteTable:
         Description: Public Routing
@@ -223,7 +220,6 @@ Outputs:
 
     PublicSubnets:
         Description: A list of the public subnets
-        #join-> take severeal values, put them together ant output that value
         Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]] 
         Export:
           Name: !Sub ${EnvironmentName}-PUB-NETS # it will formated as a list 

@@ -21,10 +21,10 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-      ManagedPolicyArns: 
-      #- arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
-        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      Path: "/"
+      # ManagedPolicyArns: 
+      #   - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      #   - arn:aws:iam::aws:policy/CloudWatchFullAccess
 
   ServerInstanceProfile:
    Type: "AWS::IAM::InstanceProfile"
@@ -49,6 +49,7 @@ Resources:
         ToPort: 80
         CidrIp: 0.0.0.0/0
 
+  #### Security Group
   WebServerSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -71,12 +72,12 @@ Resources:
         ToPort: 65535
         CidrIp: 0.0.0.0/0
 
-  WebAppLaunchConfig:
+  #### Launch Configuration 
+  WebServerLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       ImageId: ami-047a51fa27710816e
       IamInstanceProfile: !Ref ServerInstanceProfile
-      KeyName: VocareumKey2 # Provides the name of the EC2 key pair. 
       SecurityGroups:
       - Ref: WebServerSecGroup
       InstanceType: t3.medium 
@@ -95,19 +96,21 @@ Resources:
          aws s3 cp s3://udacity-demo-1/udacity.zip .
          unzip -o udacity.zip
 
-  WebAppGroup:
+  #### AutoScaling
+  WebServerAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       VPCZoneIdentifier:
       - Fn::ImportValue: 
           !Sub "${EnvironmentName}-PRIV-NETS"
       LaunchConfigurationName:
-        Ref: WebAppLaunchConfig 
+        Ref: WebServerLaunchConfig 
       MinSize: '4'
-      MaxSize: '6'
+      MaxSize: '4'
       TargetGroupARNs:
       - Ref: WebAppTargetGroup
 
+  #### LoadBalancer
   WebAppLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -130,7 +133,6 @@ Resources:
       Protocol: HTTP
 
   ALBListenerRule:
-    #is required by the loadbalancer 
      Type: AWS::ElasticLoadBalancingV2::ListenerRule
      Properties:
        Actions:
@@ -138,7 +140,7 @@ Resources:
          TargetGroupArn: !Ref 'WebAppTargetGroup'
        Conditions:
        - Field: path-pattern
-         Values: [/] #pass to listen to 
+         Values: [/]  
        ListenerArn: !Ref 'Listener'
        Priority: 1
 
@@ -156,8 +158,28 @@ Resources:
       VpcId: 
         Fn::ImportValue:
           Fn::Sub: "${EnvironmentName}-VPCID"
-  
 
+  #### EC2 Instance bucket policy
+  ListBucketsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: ListBucketsRole
+
+  ListBucketsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ListBucketsPolicy
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:List*
+          Resource: "*"
+      Roles:
+      - Ref: IAMRole 
+  
 Outputs: 
 
   LoadBalancer:
