@@ -10,6 +10,14 @@ Parameters:
     AMItoUse:
         Description: AMI to use for our base image 
         Type: String
+    
+    BastionAMItoUse:
+        Description: AMI to use for bastion node (jumpbox)
+        Type: String
+    
+    KeyName:
+        Description: Key name to use for the bastion node 
+        Type: String
 
 Resources:
   
@@ -58,6 +66,60 @@ Resources:
         ToPort: 8080
         CidrIp: 0.0.0.0/0
 
+  #### Bastion Host Configurations 
+  
+  #### Bastion EC2 
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref BastionAMItoUse
+      InstanceType: t2.micro 
+      KeyName: !Ref KeyName  
+      SubnetId: 
+        Fn::ImportValue:
+          Fn::Sub: '${EnvironmentName}-PUB1-SN'
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-BASTION-EC2'
+
+  #### Bastion Security Group 
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      GroupDescription: Bastion security group
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-BASTION-SG
+
+  #### Bastion Host Ingress
+  BastionAllowIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref BastionSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+
+  #### Bastion Host Engress
+  BastionAllowEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref BastionSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      DestinationSecurityGroupId: !Ref WebServerSecGroup
 
   #### Security Group
   WebServerSecGroup:
@@ -198,3 +260,9 @@ Outputs:
       Fn::Join: ["", ["http://", !GetAtt WebAppLB.DNSName]]
     Export:
       Name: !Sub ${EnvironmentName}-DNSName
+
+  BastionPublicIp:
+    Description: 'Bastion Public IP'
+    Value: !Sub 'http://${BastionInstance.PublicIp}'
+    Export:
+      Name: BastionPublicIp

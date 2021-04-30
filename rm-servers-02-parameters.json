@@ -6,5 +6,13 @@
   {
     "ParameterKey": "AMItoUse",
     "ParameterValue": "ami-047a51fa27710816e"
+  },
+  {
+    "ParameterKey": "BastionAMItoUse",
+    "ParameterValue": "ami-048f6ed62451373d9"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "VocareumKey2"
   }
 ]
