@@ -6,15 +6,24 @@ version: 2.1
   #welcome: circleci/welcome-orb@0.4.1
 # Orchestrate or schedule a set of jobs
 
+commands: # a reusable command with parameters
+  print_pipeline_id:
+    parameters:
+      to:
+        default: "world"
+        type: string
+    steps:
+      - run: echo {$CIRCLE_WORKFLOW_ID}
+      - run: echo {$USER_NAME}
+
 jobs:
-  echo-env-var:
+  
+  echo_env_var:
     docker:
       - image: cimg/base:2020.01 
     steps:
-      - run:
-         name: "echo an env var"
-         command: |
-           echo $USER_NAME
+      - print_pipeline_id 
+
 
   save_hello_world_output:
     docker:
@@ -37,6 +46,7 @@ jobs:
 workflows:
   my_workflow:
     jobs:
+      - echo_env_var
       - save_hello_world_output
       - print_output_file:
           requires:
